@@ -7,6 +7,7 @@ const { hrNotesSchema, resumeSchema } = require("../src/screening/schema.ts");
 const { deterministicChecks, copyRecommendation } = require("../src/screening/rules.ts");
 const { RecruitmentRepository, STORAGE_KEY } = require("../src/data/repository.ts");
 const { selectDashboard } = require("../src/data/selectors.ts");
+const { evaluateConditions } = require("../src/screening/conditions.ts");
 const { text, profile } = require("./helpers/screening.cjs");
 function fixture() {
   const rows = new Map(); let id = 0;
@@ -19,7 +20,7 @@ function fixture() {
     calls++;
     return { value: prompt.includes('experienceYears') ? profile() : { findings: [{ jdQuote: body.jd.slice(0, 20), resumeQuote: "React", assessment: "相关" }] }, usage: { promptTokens: 100, completionTokens: 50 } };
   } });
-  const input = { text, job: snapshot, hrNotes: hrNotesSchema.parse({ currentBase: "Shanghai", earliestStart: "2026-12-15" }) };
+  const input = { text, job: snapshot, hrNotes: hrNotesSchema.parse({ currentBase: "Shanghai", earliestStart: "2026-12-15" }), preScreening: { ...evaluateConditions(job.id, [], {}), overrideReason: "旧岗位无配置，人工核对后继续" } };
   return { repo, storage, analyze, input, calls: () => calls };
 }
 function saveInput(result, input, extra = {}) { return { importId: "fixture-import", jobId: input.job.id, jobVersion: result.jobVersion, resumeHash: result.resumeHash, resume: result.resume, hrNotes: input.hrNotes, analysis: result.analysis, usage: result.usage, content: result.analysis.draft, recommend: true, acknowledged: true, ...extra }; }
@@ -64,6 +65,7 @@ test("same-name ambiguity, different jobs, draft promotion and stale JD guards",
   assert.equal(promoted.applications.at(-1).stage, "业务复筛");
   assert.equal(promoted.candidates.length, draft.candidates.length);
   const other = { ...f.input, job: { ...f.input.job, id: data.jobs[1].id, title: data.jobs[1].title, jd: data.jobs[1].jd } };
+  other.preScreening = { ...evaluateConditions(other.job.id, [], {}), overrideReason: "切换岗位后重新人工核对" };
   const analysis = await f.analyze(other);
   const second = f.repo.saveImport(saveInput(analysis, other, { importId: "second-job", existingCandidateId: candidateId }));
   assert.equal(second.applications.filter(a => a.candidateId === candidateId).length, 2);

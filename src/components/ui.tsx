@@ -8,6 +8,8 @@ import { useRecruitment } from "@/src/data/store";
 import { formatDate } from "@/src/data/selectors";
 import ApplicationEditor from "./application-editor";
 import ScreeningDetails from "./screening-details";
+export { default as StatusTag } from "./status-badge";
+import StatusTag from "./status-badge";
 export function PageHeading({
   eyebrow,
   title,
@@ -35,14 +37,6 @@ export function Panel({
   className?: string;
 }) {
   return <section className={`panel ${className}`}><div className="panel-heading"><div><h2>{title}</h2>{subtitle && <p>{subtitle}</p>}</div>{extra}</div>{children}</section>;
-}
-export function StatusTag({
-  value
-}: {
-  value: string;
-}) {
-  const color = /通过|招聘中|完成/.test(value) ? "green" : /淘汰|结束/.test(value) ? "default" : /暂停|待/.test(value) ? "orange" : /Offer/.test(value) ? "purple" : "blue";
-  return <Tag color={color} className="status-tag"><span className="tag-dot" />{value}</Tag>;
 }
 export function Score({
   value
@@ -74,7 +68,7 @@ export function CandidateDrawer({
   const candidate = candidates.find(c => c.applicationId === selectedCandidate?.applicationId) ?? null;
   const job = jobs.find(j => j.id === candidate?.jobId);
   const stages = workflows.find(w => w.id === job?.workflowId)?.stages ?? [];
-  return <Drawer title="候选人详情" open={!!candidate} onClose={onClose} size={620}>{candidate && <><div className="detail-person"><Person candidate={candidate} />{candidate.recommendation ? <Tag>见初筛分析</Tag> : <Score value={candidate.score} />}</div><p className="muted">应聘 {job?.title} · {job?.department}</p><div className="detail-tags"><StatusTag value={candidate.stage} /><StatusTag value={candidate.status} /><Tag>{candidate.recommendation ? "简历导入" : "Mock 候选人"}</Tag></div><ApplicationEditor key={`${candidate.applicationId}-${candidate.stage}-${candidate.status}-${candidate.interview}`} candidate={candidate} /><Tabs key={`${candidate.applicationId}-${initialTab}`} defaultActiveKey={initialTab} items={[...(candidate.recommendation ? [{ key: "screening", label: "初筛与推荐", children: <ScreeningDetails applicationId={candidate.applicationId} /> }] : []), {
+  return <Drawer title="候选人详情" open={!!candidate} onClose={onClose} size={760}>{candidate && <><div className="detail-person"><Person candidate={candidate} />{candidate.recommendation ? <Tag>见初筛分析</Tag> : <Score value={candidate.score} />}</div><p className="muted">应聘 {job?.title} · {job?.department}</p><div className="detail-tags"><StatusTag kind="stage" value={candidate.stage} /><StatusTag value={candidate.status} /><Tag>{candidate.recommendation ? "简历导入" : "Mock 候选人"}</Tag></div><Tabs key={`${candidate.applicationId}-${initialTab}`} defaultActiveKey={initialTab} items={[...(candidate.recommendation ? [{ key: "screening", label: "初筛与推荐", children: <ScreeningDetails applicationId={candidate.applicationId} /> }] : []), {
         key: "profile",
         label: "基本资料",
         children: <><Descriptions column={2} items={[{
@@ -107,9 +101,13 @@ export function CandidateDrawer({
         label: "AI 匹配概览",
         children: candidate.recommendation ? <ScreeningDetails applicationId={candidate.applicationId} /> : <><div className="match-summary"><Sparkles size={24} /><h3>岗位匹配度 {candidate.score}%</h3><p>以下为预置展示内容，未执行真实 AI 评分。</p></div>{["专业技能", "工作经验", "教育背景"].map((s, i) => <div className="match-row" key={s}><span>{s}</span><Progress percent={Math.min(100, candidate.score + i * 2)} size="small" /></div>)}<blockquote>示例依据：{candidate.summary}</blockquote></>
       }, {
+        key: "feedback",
+        label: "录入反馈",
+        children: <ApplicationEditor key={`${candidate.applicationId}-${candidate.stage}-${candidate.status}-${candidate.interview}`} candidate={candidate} />
+      }, {
         key: "timeline",
         label: "招聘进度",
-        children: <><div className="workflow-note"><MapPin size={16} />{workflows.find(w => w.id === job?.workflowId)?.name} · 当前：{candidate.stage}</div><div className="stage-list">{stages.map(s => <Tag color={s === candidate.stage ? "blue" : undefined} key={s}>{s}</Tag>)}</div><div className="interview-records">{data.interviews.filter(r => r.applicationId === candidate.applicationId).map(r => <div className="info-block" key={r.id}><div><strong>{r.stage} / {r.status}</strong><p>{r.scheduledAt ? new Date(r.scheduledAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" }) : "面试时间未提供"}</p><p>{r.note}</p>{r.interviewer && <p>面试官：{r.interviewer}</p>}{r.result && <p>结果：{r.result}</p>}</div></div>)}</div><div>{data.events.filter(e => e.applicationId === candidate.applicationId && e.source).map(e => <details key={e.id}><summary>{e.title}</summary><blockquote>{e.source?.mode === "manual" ? (e.source.confirmed.remarks || "手动填写面试记录") : e.source?.original.evidence}</blockquote><p className="muted">{e.source?.confirmationNote}</p><p className="muted">事件时间：{e.source && formatDate(e.source.message.messageAt)}（上海）</p><p className="muted">{e.source?.mode === "manual" ? "手动填写" : "AI 提取"}：{e.source?.original.completedStage ?? "未提供"} / {e.source?.original.interviewResult ?? "未提供"} / {e.source?.original.nextStage ?? "无后续安排"}</p><p className="muted">HR 确认：{e.source?.confirmed.completedStage ?? "未提供"} / {e.source?.confirmed.interviewResult ?? "未提供"} / {e.source?.confirmed.nextStage ?? "无后续安排"}</p>{e.interviewChanges?.map(change => <p className="muted" key={change.after.id}>{change.after.stage} / {change.after.status} / {change.after.interviewer ?? "面试官未提供"} / {change.after.result ?? "待反馈"}<br />原时间：{change.before?.scheduledAt ? formatDate(change.before.scheduledAt) : "未记录"} → 确认时间：{change.after.scheduledAt ? formatDate(change.after.scheduledAt) : "未提供"}</p>)}</details>)}</div><h3 className="section-title">面试与流转历史</h3><Timeline items={[...candidate.history.map(h => ({
+        children: <><div className="workflow-note"><MapPin size={16} />{workflows.find(w => w.id === job?.workflowId)?.name} · 当前：{candidate.stage}</div><div className="stage-list">{stages.map(s => <StatusTag kind="stage" current={s === candidate.stage} key={s} value={s} />)}</div><div className="interview-records">{data.interviews.filter(r => r.applicationId === candidate.applicationId).map(r => <div className="info-block" key={r.id}><div><strong>{r.stage}</strong> <StatusTag value={r.status} /><p>{r.scheduledAt ? new Date(r.scheduledAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" }) : "面试时间未提供"}</p><p>{r.note}</p>{r.interviewer && <p>面试官：{r.interviewer}</p>}{r.result && <p>结果：<StatusTag value={r.result} /></p>}</div></div>)}</div><div>{data.events.filter(e => e.applicationId === candidate.applicationId && e.source).map(e => <details key={e.id}><summary>{e.title}</summary><blockquote>{e.source?.mode === "manual" ? (e.source.confirmed.remarks || "手动填写面试记录") : e.source?.original.evidence}</blockquote><p className="muted">{e.source?.confirmationNote}</p><p className="muted">事件时间：{e.source && formatDate(e.source.message.messageAt)}（上海）</p><p className="muted">{e.source?.mode === "manual" ? "手动填写" : "AI 提取"}：{e.source?.original.completedStage ?? "未提供"} / {e.source?.original.interviewResult ?? "未提供"} / {e.source?.original.nextStage ?? "无后续安排"}</p><p className="muted">HR 确认：{e.source?.confirmed.completedStage ?? "未提供"} / {e.source?.confirmed.interviewResult ?? "未提供"} / {e.source?.confirmed.nextStage ?? "无后续安排"}</p>{e.interviewChanges?.map(change => <p className="muted" key={change.after.id}>{change.after.stage} / {change.after.status} / {change.after.interviewer ?? "面试官未提供"} / {change.after.result ?? "待反馈"}<br />原时间：{change.before?.scheduledAt ? formatDate(change.before.scheduledAt) : "未记录"} → 确认时间：{change.after.scheduledAt ? formatDate(change.after.scheduledAt) : "未提供"}</p>)}</details>)}</div><h3 className="section-title">面试与流转历史</h3><Timeline items={[...candidate.history.map(h => ({
             color: "green",
             content: <><strong>{h.title}</strong><p className="muted">{h.date}</p><p>{h.note}</p></>
           })), {

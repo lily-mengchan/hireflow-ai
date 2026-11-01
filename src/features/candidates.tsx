@@ -9,6 +9,7 @@ import { useRecruitment } from "@/src/data/store";
 import { CandidateDrawer, EmptyResult, PageHeading, Person, Score, StatusTag } from "@/src/components/ui";
 import { currentOverview } from "@/src/analytics/facts";
 import CandidateImport from "@/src/components/candidate-import";
+import { formatDate } from "@/src/data/selectors";
 export default function Candidates() {
   const { candidates, jobs, data } = useRecruitment();
   const overview = currentOverview(data);
@@ -31,7 +32,7 @@ export default function Candidates() {
     setInterview(undefined);
     setPage(1);
   }
-  return <><PageHeading eyebrow="CANDIDATE MANAGEMENT" title="候选人管理" description="看见每一份潜力，让人才与机会精准相遇。" actions={<Button type="primary" icon={<FileUp size={15} />} onClick={() => setImportOpen(true)}>导入候选人</Button>} /><div className="candidate-overview"><div><span className="stat-icon blue"><Users size={23} /></span><div><p>人才库候选人</p><strong>{data.candidates.length}<small>人</small></strong></div></div><div><p>高匹配候选人</p><strong>{new Set(candidates.filter(c => c.score >= 85).map(c => c.id)).size}<small>人 · AI 匹配 ≥ 85 分</small></strong></div><div><p>面试已安排</p><strong>{new Set(candidates.filter(c => c.interview === "已安排" && c.status !== "已淘汰").map(c => c.id)).size}<small>人</small></strong></div><div><p>等待安排面试</p><strong>{overview.pendingInterviews}<small>人</small></strong></div></div><section className="panel list-panel"><div className="list-title"><h2>岗位申请列表 <span>{filtered.length}</span></h2><span className="muted">AI 匹配分数为预置演示数据</span></div><div className="filter-bar wrap"><Input aria-label="搜索候选人" prefix={<Search size={16} />} placeholder="搜索姓名或候选人编号" value={search} onChange={e => {
+  return <><PageHeading eyebrow="CANDIDATE MANAGEMENT" title="候选人管理" description="集中管理人才资料、岗位申请与推荐记录。" actions={<Button type="primary" icon={<FileUp size={15} />} onClick={() => setImportOpen(true)}>导入候选人</Button>} /><div className="candidate-overview"><div><span className="stat-icon blue"><Users size={23} /></span><div><p>人才库候选人</p><strong>{data.candidates.length}<small>人</small></strong></div></div><div><p>高匹配候选人</p><strong>{new Set(candidates.filter(c => c.score >= 85).map(c => c.id)).size}<small>人 · AI 匹配 ≥ 85 分</small></strong></div><div><p>面试已安排</p><strong>{new Set(candidates.filter(c => c.interview === "已安排" && c.status !== "已淘汰").map(c => c.id)).size}<small>人</small></strong></div><div><p>等待安排面试</p><strong>{overview.pendingInterviews}<small>人</small></strong></div></div><section className="panel list-panel"><div className="list-title"><h2>岗位申请列表 <span>{filtered.length}</span></h2><span className="muted">AI 匹配分数为预置演示数据</span></div><div className="filter-bar wrap"><Input aria-label="搜索候选人" prefix={<Search size={16} />} placeholder="搜索姓名或候选人编号" value={search} onChange={e => {
           setSearch(e.target.value);
           setPage(1);
         }} allowClear /><Select aria-label="候选人岗位筛选" placeholder="全部岗位" allowClear value={job} onChange={v => {
@@ -63,7 +64,7 @@ export default function Candidates() {
         }))} /><Button onClick={reset}>重置</Button></div><Table rowKey="applicationId" locale={{
         emptyText: <EmptyResult />
       }} dataSource={filtered} scroll={{
-        x: 1200
+        x: 1440
       }} pagination={{
         current: page,
         onChange: setPage,
@@ -78,30 +79,40 @@ export default function Candidates() {
       }, {
         title: "应聘岗位",
         dataIndex: "jobId",
+        width: 230,
         render: id => <div className="cell-stack"><strong>{jobs.find(j => j.id === id)?.title}</strong><small>{jobs.find(j => j.id === id)?.department}</small></div>
       }, {
         title: "学历 / 工作经验",
+        width: 190,
         render: (_, c) => <div className="cell-stack"><span>{c.education} · {c.recommendation?.resume.experienceYears.value === null ? "工作年限未提供" : `${c.experience} 年`}</span><small>{c.school}</small></div>
       }, {
         title: "AI 匹配",
+        width: 110,
         dataIndex: "score",
         sorter: (a, b) => a.score - b.score,
         render: (v, c) => c.recommendation ? <Tag>见初筛分析</Tag> : <Score value={v} />
       }, {
         title: "招聘阶段",
+        width: 130,
         dataIndex: "stage",
         render: (v, c) => <StatusTag value={c.recommendation && c.stage === workflows.find(w => w.id === jobs.find(j => j.id === c.jobId)?.workflowId)?.stages[c.recommendation.status === "待 HR 审核" ? 0 : 1] && c.status === "待处理" ? c.recommendation.status : v} />
       }, {
         title: "处理状态",
+        width: 110,
         dataIndex: "status",
         render: v => <StatusTag value={v} />
       }, {
-        title: "面试状态",
-        dataIndex: "interview",
-        render: v => <StatusTag value={v} />
+        title: "面试 / HR 推荐",
+        width: 170,
+        render: (_, c) => <div className="cell-stack"><StatusTag value={c.interview} />{c.recommendation ? <StatusTag value={c.recommendation.status} /> : <small>暂无推荐记录</small>}</div>
+      }, {
+        title: "最近更新",
+        width: 145,
+        render: (_, c) => <span className="table-date">{formatDate(data.applications.find(a => a.id === c.applicationId)?.updatedAt ?? c.createdAt)}</span>
       }, {
         title: "操作",
         fixed: "right",
+        width: 110,
         render: (_, c) => <button className="text-button" onClick={() => setDetail(c)}>查看详情</button>
       }]} /></section>{importOpen && <CandidateImport open={importOpen} onClose={() => setImportOpen(false)} />}<CandidateDrawer candidate={detail} onClose={() => setDetail(null)} /></>;
 }

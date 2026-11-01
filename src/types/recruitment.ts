@@ -16,6 +16,7 @@ export interface Job {
   jd: string;
   created: string;
   workflowId: string;
+  screeningConditions?: import("../screening/conditions").ScreeningCondition[];
 }
 
 export interface Candidate {
@@ -42,6 +43,7 @@ export interface Application {
   score: number;
   createdAt: string;
   updatedAt: string;
+  preScreening?: import("zod").infer<typeof import("../screening/conditions").savedPreScreeningSchema>;
   recommendation?: import("../screening/schema").Recommendation;
 }
 

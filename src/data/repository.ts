@@ -5,6 +5,7 @@ import { workflows } from "../mocks/data";
 import { createSeed } from "../mocks/seed";
 import { recommendationSchema, resumeSchema, saveImportSchema, type SaveImport } from "../screening/schema";
 import { jobVersion, redactContacts } from "../screening/rules";
+import { conditionsSchema, evaluateConditions, savedPreScreeningSchema, validatePreScreening } from "../screening/conditions";
 
 export const STORAGE_KEY = "hireflow-ai:recruitment:v1";
 export type StorageAdapter = Pick<Storage, "getItem" | "setItem">;
@@ -37,6 +38,7 @@ export function validateData(value: unknown): asserts value is RecruitmentData {
     strings(row, ["title", "department", "location", "salary", "type", "education", "experience", "jd", "workflowId"]);
     assert(j.title.trim() && j.jd.trim()); date(j.created); number(j.headcount, 1, 999); assert(Number.isInteger(j.headcount));
     assert(["招聘中", "已暂停", "已结束"].includes(j.status)); assert(workflows.some(w => w.id === j.workflowId));
+    if (j.screeningConditions !== undefined) assert(conditionsSchema.safeParse(j.screeningConditions).success);
   });
   data.candidates.forEach(c => { strings(c as unknown as Record<string, unknown>, ["name", "education", "school", "company", "summary"]); date(c.createdAt); number(c.experience, 0); assert(Array.isArray(c.skills) && c.skills.every(s => typeof s === "string")); });
   data.candidates.forEach(c => {
@@ -50,6 +52,7 @@ export function validateData(value: unknown): asserts value is RecruitmentData {
     assert(workflows.find(w => w.id === job.workflowId)!.stages.includes(a.stage));
     const pair = JSON.stringify([a.candidateId, a.jobId]); assert(!pairs.has(pair)); pairs.add(pair);
     if (a.recommendation !== undefined) assert(recommendationSchema.safeParse(a.recommendation).success);
+    if (a.preScreening !== undefined) { assert(savedPreScreeningSchema.safeParse(a.preScreening).success); assert(a.preScreening.applicationId === a.id && a.preScreening.jobId === a.jobId); }
   });
   data.interviews.forEach(i => {
     strings(i as unknown as Record<string, unknown>, ["applicationId", "stage", "note"]);
@@ -94,6 +97,7 @@ export class RecruitmentRepository {
     const job = data.jobs.find(j => j.id === input.jobId);
     assert(job && job.status === "招聘中", "目标岗位已暂停、结束或删除，请重新选择");
     assert(jobVersion(job) === input.jobVersion, "岗位 JD 或条件已更新，请重新生成评语后再保存");
+    validatePreScreening(job, input.preScreening);
     assert(input.resume.name.value?.trim(), "请确认候选人姓名后再保存");
     const exact = data.candidates.filter(c => c.resumeHashes?.includes(input.resumeHash));
     const sameName = data.candidates.filter(c => c.name.trim() === input.resume.name.value!.trim());
@@ -117,6 +121,7 @@ export class RecruitmentRepository {
       recommendation: { id: input.importId, resumeHash: input.resumeHash, jobVersion: input.jobVersion, resume, hrNotes: input.hrNotes, analysis: input.analysis, usage: input.usage, content: redactContacts(input.content), status: input.recommend ? "待业务复筛" : "待 HR 审核", savedAt: now, recommendedAt: input.recommend ? now : null },
     };
     data.applications = existing ? data.applications.map(a => a.id === existing.id ? application : a) : [...data.applications, application];
+    if (input.preScreening) application.preScreening = { ...input.preScreening, applicationId: application.id, records: input.preScreening.results.map(r => ({ ...r, applicationId: application.id, jobId: job.id, conditionsVersion: input.preScreening!.conditionsVersion, checkedAt: input.preScreening!.checkedAt, source: "HR_NOTE" })) };
     data.events.push({ id: `IMPORT-${input.importId}`, applicationId: application.id, candidateId, jobId: job.id, type: existing ? "application-updated" : "application-created", occurredAt: now, title: input.recommend ? "HR 确认推荐 · 待业务复筛" : "简历导入 · 待 HR 审核", note: "结构化简历、沟通信息和推荐草稿已保存；来源分别保留，未自动发送。", ...(existing ? { before: { stage: existing.stage, status: existing.status, interview: existing.interview } } : {}), after: { stage: application.stage, status: application.status, interview: application.interview } });
     return this.persist(data);
   }
@@ -164,6 +169,7 @@ export class RecruitmentRepository {
     return this.persist(data);
   }
   saveJob(input: JobInput, jobId?: string) {
+    evaluateConditions(jobId ?? "new", input.screeningConditions, {});
     const data = this.load(); const now = this.clock().toISOString();
     const existing = jobId ? data.jobs.find(j => j.id === jobId) : undefined;
     assert(!jobId || existing, "岗位已不存在，请重新选择");

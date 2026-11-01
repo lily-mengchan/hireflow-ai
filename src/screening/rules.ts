@@ -1,7 +1,8 @@
 import type { Analysis, HrNotes, ResumeProfile, ScreeningJob } from "./schema";
+import { conditionsVersion } from "./conditions";
 
 // Browser/server identical, contains only fields that affect the selected job analysis.
-export function jobVersion(job: ScreeningJob) { return JSON.stringify([job.id, job.title, job.jd, job.location, job.education, job.experience, job.workflowId]); }
+export function jobVersion(job: ScreeningJob) { const fields = [job.id, job.title, job.jd, job.location, job.education, job.experience, job.workflowId]; return JSON.stringify(job.screeningConditions?.length ? [...fields, conditionsVersion(job.screeningConditions)] : fields); }
 export function redactContacts(text: string) { return text.replace(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/gi, "[邮箱已移除]").replace(/(?:\+?86[- ]?)?1[3-9]\d{9}/g, "[电话已移除]"); }
 export function resumeFacts(resume: ResumeProfile) { return [resume.name, resume.education, resume.school, resume.company, resume.experienceYears, resume.currentBase, resume.desiredLocation, resume.earliestStart, ...resume.skills, ...resume.experiences, ...resume.projects]; }
 export function deterministicChecks(resume: ResumeProfile, hr: HrNotes, job: ScreeningJob): Analysis["checks"] {

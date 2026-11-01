@@ -18,6 +18,10 @@ async function main() {
     await drawer.getByRole("combobox").first().click(); await drawer.getByRole("combobox").first().press("ArrowDown"); await drawer.getByRole("combobox").first().press("Enter");
     await drawer.getByLabel("目前 Base 地", { exact: true }).fill("Shanghai");
     await drawer.getByLabel("最早可到岗时间", { exact: true }).fill("2026-12-15");
+    await drawer.getByRole("button", { name: "检查基础条件", exact: true }).click();
+    await drawer.getByRole("textbox", { name: "人工继续原因", exact: true }).fill("未配置条件，人工核对模拟资料后继续");
+    await drawer.getByRole("button", { name: "人工确认继续分析", exact: true }).click();
+    await page.getByRole("button", { name: "确认继续", exact: true }).click();
     const responsePromise = page.waitForResponse(r => r.url().endsWith("/api/recruitment/screen"), { timeout: 180000 });
     await drawer.getByRole("button", { name: "生成推荐评语", exact: true }).click();
     const response = await responsePromise, result = await response.json();

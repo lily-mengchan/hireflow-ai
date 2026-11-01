@@ -5,8 +5,9 @@ import { createParseCache } from "../messages/parse-cache";
 import { MAX_RESUME_TEXT, resumeSchema, hrNotesSchema, screeningJobSchema, semanticSchema, type ScreeningResult, type ResumeProfile } from "./schema";
 import { buildDraft, deterministicChecks, jobVersion, redactContacts, resumeFacts } from "./rules";
 import { MATCH_PROMPT, RESUME_PROMPT } from "./prompt";
+import { preScreeningSchema, validatePreScreening } from "./conditions";
 
-export const analyzeRequestSchema = z.object({ text: z.string().trim().min(40).max(MAX_RESUME_TEXT), job: screeningJobSchema, hrNotes: hrNotesSchema, editedResume: resumeSchema.optional() }).strict();
+export const analyzeRequestSchema = z.object({ text: z.string().trim().min(40).max(MAX_RESUME_TEXT), job: screeningJobSchema, hrNotes: hrNotesSchema, editedResume: resumeSchema.optional(), preScreening: preScreeningSchema.optional() }).strict();
 export function validateResume(profile: ResumeProfile, text: string, allowHr = false) {
   for (const fact of resumeFacts(profile)) {
     if (fact.originalEvidence && !text.includes(fact.originalEvidence)) throw new RagError("人工修改前的原文依据不属于简历文本", 422);
@@ -28,6 +29,8 @@ export function createScreeningAnalyzer(deps: { complete?: typeof completeMeasur
   const call = deps.complete ?? completeMeasured, config = deps.config ?? getModelConfig;
   return async (raw: unknown) => {
     const input = analyzeRequestSchema.parse(raw);
+    try { if (!input.preScreening) throw new Error("请先检查基础条件，未配置条件时请人工确认继续"); validatePreScreening(input.job, input.preScreening); }
+    catch (error) { throw new RagError(error instanceof Error ? error.message : "请先检查基础条件", 422); }
     const text = redactContacts(input.text).replace(/\r\n/g, "\n").trim();
     const cfg = config();
     const resumeHash = digest(text), version = jobVersion(input.job);

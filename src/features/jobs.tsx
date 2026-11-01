@@ -8,6 +8,8 @@ import type { JobSummary as Job } from "@/src/types/recruitment";
 import { recruitmentActions, useRecruitment } from "@/src/data/store";
 import { selectHiredCount } from "@/src/data/selectors";
 import { EmptyResult, PageHeading, StatusTag } from "@/src/components/ui";
+import JobConditions from "@/src/components/job-conditions";
+import { evaluateConditions } from "@/src/screening/conditions";
 export default function Jobs() {
   const { jobs, data, ready } = useRecruitment();
   const [search, setSearch] = useState("");
@@ -42,7 +44,7 @@ export default function Jobs() {
       message.success("岗位已保存，刷新后仍会保留");
     } catch (error) { message.error(error instanceof Error ? error.message : "保存失败，请检查浏览器存储权限"); }
   }
-  return <><PageHeading eyebrow="JOB MANAGEMENT" title="岗位管理" description="管理每一个招聘需求，为团队寻找下一位同行者。" actions={<Button type="primary" icon={<Plus size={16} />} disabled={!ready} onClick={() => openEditor("new")}>新建岗位</Button>} /><div className="mini-stats">{[{
+  return <><PageHeading eyebrow="JOB MANAGEMENT" title="岗位管理" description="管理招聘需求、岗位要求与招聘进度。" actions={<Button type="primary" icon={<Plus size={16} />} disabled={!ready} onClick={() => openEditor("new")}>新建岗位</Button>} /><div className="mini-stats">{[{
         label: "全部岗位",
         value: jobs.length
       }, {
@@ -55,7 +57,7 @@ export default function Jobs() {
         label: "已录用",
         value: selectHiredCount(data)
       }].map(s => <div key={s.label}><span>{s.label}</span><strong>{s.value}<small>{s.label.includes("招聘") && s.label !== "招聘中" ? "人" : s.label === "已录用" ? "人" : "个"}</small></strong></div>)}</div>
-    <section className="panel list-panel"><div className="list-title"><h2>岗位列表 <span>{jobs.length}</span></h2><span className="muted">让每个招聘需求都有条不紊</span></div><div className="filter-bar"><Input prefix={<Search size={16} />} placeholder="搜索岗位名称或编号" aria-label="搜索岗位" value={search} onChange={e => setSearch(e.target.value)} allowClear /><Select placeholder="全部部门" aria-label="按部门筛选" allowClear value={department} onChange={setDepartment} options={[...new Set(jobs.map(j => j.department))].map(value => ({
+    <section className="panel list-panel"><div className="list-title"><h2>岗位列表 <span>{jobs.length}</span></h2><span className="muted">按最新保存的岗位信息展示</span></div><div className="filter-bar"><Input prefix={<Search size={16} />} placeholder="搜索岗位名称或编号" aria-label="搜索岗位" value={search} onChange={e => setSearch(e.target.value)} allowClear /><Select placeholder="全部部门" aria-label="按部门筛选" allowClear value={department} onChange={setDepartment} options={[...new Set(jobs.map(j => j.department))].map(value => ({
           value
         }))} /><Select placeholder="全部状态" aria-label="按岗位状态筛选" allowClear value={status} onChange={setStatus} options={["招聘中", "已暂停", "已结束"].map(value => ({
           value
@@ -66,7 +68,7 @@ export default function Jobs() {
         }}>重置</Button><span className="filter-count">共 {filtered.length} 个岗位</span></div><Table rowKey="id" dataSource={filtered} locale={{
         emptyText: <EmptyResult />
       }} scroll={{
-        x: 1020
+        x: 1150
       }} pagination={{
         defaultPageSize: 6,
         showSizeChanger: false,
@@ -74,6 +76,7 @@ export default function Jobs() {
       }} columns={[{
         title: "岗位名称",
         dataIndex: "title",
+        width: 280,
         render: (v, r) => <div className="job-name"><span className="job-mini-icon"><BriefcaseBusiness size={19} /></span><span><button className="table-name" onClick={() => setDetail(r)}>{v}</button><small>{r.id} · {r.salary} · {r.type}</small></span></div>
       }, {
         title: "所属部门",
@@ -99,6 +102,7 @@ export default function Jobs() {
       }, {
         title: "操作",
         fixed: "right",
+        width: 120,
         render: (_, r) => <div className="table-actions"><button onClick={() => setDetail(r)}>详情</button><button onClick={() => openEditor(r)}>编辑</button></div>
       }]} /></section>
     <Modal title={<div className="modal-title"><BriefcaseBusiness size={21} />{editing === "new" ? "新建岗位" : "编辑岗位"}</div>} open={!!editing} onCancel={() => setEditing(null)} width={760} footer={<><Button onClick={() => setEditing(null)}>取消</Button><Button type="primary" onClick={() => form.submit()}>保存岗位</Button></>}><p className="muted">完善岗位信息，清晰传达你对下一位团队成员的期待。</p><Form form={form} layout="vertical" onFinish={save} requiredMark="optional"><div className="form-section-label">基本信息</div><div className="form-grid"><Form.Item name="title" label="岗位名称" rules={[{
@@ -135,7 +139,7 @@ export default function Jobs() {
           required: true,
           whitespace: true,
           message: "请填写岗位描述"
-        }]}><Input.TextArea rows={8} maxLength={10000} showCount placeholder="描述岗位职责、任职要求及加分项…" /></Form.Item><p className="data-note">岗位保存在此浏览器，刷新后保留。岗位 JD 及基本要求会提交至服务端和模型服务，用于智能问答。</p></Form></Modal>
+        }]}><Input.TextArea rows={8} maxLength={10000} showCount placeholder="描述岗位职责、任职要求及加分项…" /></Form.Item><div className="form-section-label">基础筛选条件</div><Form.Item name="screeningConditions" rules={[{ validator: async (_, rows) => { try { evaluateConditions("form", rows, {}); } catch (e) { throw new Error(e instanceof Error ? e.message : "请修正筛选条件"); } } }]}><JobConditions /></Form.Item><p className="data-note">岗位保存在此浏览器，刷新后保留。岗位 JD 及基本要求会提交至服务端和模型服务，用于智能问答。</p></Form></Modal>
     <Drawer title="岗位详情" open={!!detail} onClose={() => setDetail(null)} size={680} extra={detail && <Button type="primary" onClick={() => openEditor(detail)}>编辑岗位</Button>}>{detail && <><div className="job-detail-title"><span className="job-mini-icon"><BriefcaseBusiness size={25} /></span><div><h2>{detail.title}</h2><p className="muted">{detail.id} · 创建于 {detail.created}</p></div></div><div className="detail-tags"><StatusTag value={detail.status} /><Tag>{detail.department}</Tag><Tag>{detail.location}</Tag></div><Tabs items={[{
           key: "basic",
           label: "岗位信息",
