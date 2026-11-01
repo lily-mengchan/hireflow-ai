@@ -113,7 +113,13 @@ node scripts/deployment-audit.cjs
 
 ## GitHub 与 Vercel
 
-当前仓库尚未配置远程地址。本次不会自动上传、提交或部署。请按 [GitHub 上传与 Vercel 手动部署步骤](docs/deployment.md#手动上传与部署) 审阅文件、上传仓库、配置环境变量并执行线上验收。
+项目已上传并部署：
+
+- [GitHub 私有仓库](https://github.com/lily-mengchan/hireflow-ai)，生产分支 `master`。
+- [线上演示](https://hireflow-ai-nu-eight.vercel.app)，已开启 Vercel 所有部署登录保护，需获得项目访问权限。
+- [Vercel 项目](https://vercel.com/lily-mengchans-projects/hireflow-ai)。
+
+Production 与 Preview 的 8 项模型配置已安全写入 Secret，未提交到仓库。线上闭环验收结果见 [部署执行记录](docs/deployment-result.md)；首次安装和重新部署步骤保留在 [部署检查报告](docs/deployment.md#手动上传与部署)。
 
 招聘数据会持久化；助手会话和附件文件名仍只保存在当前页面内存。附件不上传、不读取内容。请仅使用模拟信息，不录入真实个人敏感资料。
 
