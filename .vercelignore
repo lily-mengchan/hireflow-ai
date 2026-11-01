@@ -1,6 +1,8 @@
 # Keep credentials, local data and verification artifacts out of CLI uploads.
 .env*
 .local/
+.local
+.local/**
 .git/
 .vercel/
 node_modules/

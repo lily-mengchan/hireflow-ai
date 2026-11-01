@@ -7,6 +7,8 @@ const eslintConfig = defineConfig([
   ...nextTs,
   // Override default ignores of eslint-config-next.
   globalIgnores([
+    ".local/**",
+    ".vercel/**",
     "public/pdf.worker.min.mjs",
     // Default ignores of eslint-config-next:
     ".next/**",
