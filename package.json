@@ -6,14 +6,34 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:data": "node --test tests/recruitment.test.cjs",
+    "rag:index": "node scripts/rag.cjs",
+    "rag:verify": "node scripts/rag.cjs --verify",
+    "test:rag": "node --test tests/rag.test.cjs",
+    "test:messages": "node --test tests/messages.test.cjs",
+    "messages:verify": "node scripts/messages-verify.cjs",
+    "test:feedback": "node --test tests/feedback.test.cjs",
+    "test:screening": "node --test tests/screening.test.cjs",
+    "screening:verify": "node scripts/screening-verify.cjs",
+    "screening:browser": "node scripts/screening-browser.cjs",
+    "test:analytics": "node --test tests/analytics.test.cjs",
+    "analytics:verify": "node scripts/analytics-verify.cjs",
+    "analytics:browser": "node scripts/analytics-browser.cjs",
+    "test": "node --test tests/analytics.test.cjs tests/screening.test.cjs tests/feedback.test.cjs tests/messages.test.cjs tests/recruitment.test.cjs tests/rag.test.cjs"
   },
   "dependencies": {
+    "antd": "^6.6.8",
+    "lucide-react": "^1.65.0",
     "next": "16.4.3",
+    "pdfjs-dist": "5.4.296",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "recharts": "^3.10.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -22,5 +42,8 @@
     "eslint-config-next": "16.4.3",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

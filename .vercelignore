@@ -1,0 +1,18 @@
+# Keep credentials, local data and verification artifacts out of CLI uploads.
+.env*
+.local/
+.git/
+.vercel/
+node_modules/
+.next/
+coverage/
+uploads/
+resumes/
+private/
+*.pdf
+*.doc
+*.docx
+*.pem
+*.key
+*.p12
+*.pfx

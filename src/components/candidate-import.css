@@ -1,0 +1,31 @@
+.candidate-import { color: #344054; }
+.candidate-import .ant-steps { margin: 4px 0 28px; }
+.screening-section { padding: 20px; border: 1px solid #e8edf5; border-radius: 12px; margin: 18px 0; background: #fff; }
+.screening-section h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+.screening-section > .ant-select { width: 100%; }
+.screening-section > .muted { margin: 8px 0 14px; line-height: 1.8; }
+.screening-section .ant-upload-drag svg { color: #477df4; margin: 5px auto 12px; }
+.screening-section .ant-upload-drag p { color: #475467; margin-bottom: 8px; }
+.screening-section small,.screening-usage { color: #8c98aa; font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
+.screening-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px; margin: 16px 0; }
+.candidate-import label { display: flex; flex-direction: column; align-items: stretch; gap: 7px; font-size: 12px; }
+.candidate-import label > .ant-tag { align-self: flex-start; }
+.candidate-import .ant-input-number { width: 100%; }
+.candidate-import .ant-checkbox-wrapper { display: inline-flex; flex-direction: row; margin: 12px 0; }
+.screening-fact-list { margin-top: 20px; }
+.screening-fact-list h4 { margin-bottom: 10px; font-weight: 600; }
+.screening-fact-list label { margin: 12px 0; }
+.screening-checks { display: grid; gap: 12px; margin: 14px 0; }
+.screening-checks > div { padding: 12px 14px; background: #f8faff; border-radius: 8px; }
+.screening-checks strong { font-size: 12px; font-weight: 500; }
+.screening-checks p { font-size: 12px; color: #7a879b; line-height: 1.8; margin-top: 7px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.screening-file { color: #477df4; margin-top: 12px; }
+.screening-section details { margin-top: 12px; font-size: 12px; color: #667085; }
+.screening-section pre,.screening-content { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.9; margin: 12px 0; }
+.screening-footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin: 20px 0; }
+.screening-success { padding: 28px 0; }
+.screening-success > svg { color: #22a57d; margin-bottom: 16px; }
+.screening-success p { margin: 12px 0; color: #7a879b; }
+.screening-success .ant-input { margin: 10px 0 20px; }
+.screening-usage { margin-top: 24px; padding-top: 14px; border-top: 1px solid #edf0f6; }
+@media(max-width:640px) { .screening-grid { grid-template-columns: 1fr; } .screening-section { padding: 15px; } }

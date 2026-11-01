@@ -1,0 +1,15 @@
+.recruitment-query-result { background: #fff; border: 1px solid #e7edf7; border-radius: 12px; padding: 18px; margin-top: 12px; min-width: 0; max-width: 100%; }
+.query-result-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
+.query-result-heading strong { font-size: 13px; color: #344054; }
+.query-result-heading > span { font-size: 10px; color: #98a2b3; }
+.query-metrics { display: grid; grid-template-columns: repeat(auto-fit,minmax(120px,1fr)); gap: 10px; margin-bottom: 14px; }
+.query-metrics > div { background: #f6f9ff; padding: 12px; border-radius: 8px; }
+.query-metrics span { display: block; color: #8593a8; font-size: 11px; }
+.query-metrics strong { display: block; color: #3869c7; font-size: 22px; font-weight: 600; margin-top: 6px; }
+.query-metrics small { font-size: 10px; color: #98a2b3; font-weight: 400; margin-left: 6px; }
+.recruitment-query-result .ant-table { font-size: 11px; }
+.recruitment-query-result .ant-collapse { margin-top: 10px; }
+.recruitment-query-result .ant-collapse-header { font-size: 11px; color: #8993a4 !important; }
+.recruitment-query-result .ant-collapse-content p { font-size: 11px; color: #8993a4; line-height: 1.9; margin: 6px 0; }
+.message-body:has(.recruitment-query-result) { min-width: 0; width: min(100%, 960px); }
+@media(max-width:640px) { .recruitment-query-result { padding: 12px; } .query-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); } }
