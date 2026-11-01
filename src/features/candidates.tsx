@@ -104,7 +104,7 @@ export default function Candidates() {
       }, {
         title: "面试 / HR 推荐",
         width: 170,
-        render: (_, c) => <div className="cell-stack"><StatusTag value={c.interview} />{c.recommendation ? <StatusTag value={c.recommendation.status} /> : <small>暂无推荐记录</small>}</div>
+        render: (_, c) => <div className="cell-stack"><StatusTag value={c.interview} />{c.recommendation ? <StatusTag value={data.applications.find(a => a.id === c.applicationId)?.collaboration?.businessReviewStatus === "建议进入面试" ? "待 HR 确认推进" : data.applications.find(a => a.id === c.applicationId)?.collaboration?.businessReviewStatus ?? c.recommendation.status} /> : <small>暂无推荐记录</small>}</div>
       }, {
         title: "最近更新",
         width: 145,

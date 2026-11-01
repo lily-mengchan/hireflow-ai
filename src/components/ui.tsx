@@ -7,6 +7,7 @@ import type { Candidate, CandidateApplication } from "@/src/types/recruitment";
 import { useRecruitment } from "@/src/data/store";
 import { formatDate } from "@/src/data/selectors";
 import ApplicationEditor from "./application-editor";
+import { CollaborationDetail } from "../features/collaboration";
 import ScreeningDetails from "./screening-details";
 export { default as StatusTag } from "./status-badge";
 import StatusTag from "./status-badge";
@@ -68,7 +69,7 @@ export function CandidateDrawer({
   const candidate = candidates.find(c => c.applicationId === selectedCandidate?.applicationId) ?? null;
   const job = jobs.find(j => j.id === candidate?.jobId);
   const stages = workflows.find(w => w.id === job?.workflowId)?.stages ?? [];
-  return <Drawer title="候选人详情" open={!!candidate} onClose={onClose} size={760}>{candidate && <><div className="detail-person"><Person candidate={candidate} />{candidate.recommendation ? <Tag>见初筛分析</Tag> : <Score value={candidate.score} />}</div><p className="muted">应聘 {job?.title} · {job?.department}</p><div className="detail-tags"><StatusTag kind="stage" value={candidate.stage} /><StatusTag value={candidate.status} /><Tag>{candidate.recommendation ? "简历导入" : "Mock 候选人"}</Tag></div><Tabs key={`${candidate.applicationId}-${initialTab}`} defaultActiveKey={initialTab} items={[...(candidate.recommendation ? [{ key: "screening", label: "初筛与推荐", children: <ScreeningDetails applicationId={candidate.applicationId} /> }] : []), {
+  return <Drawer title="候选人详情" open={!!candidate} onClose={onClose} size={760}>{candidate && <><div className="detail-person"><Person candidate={candidate} />{candidate.recommendation ? <Tag>见初筛分析</Tag> : <Score value={candidate.score} />}</div><p className="muted">应聘 {job?.title} · {job?.department}</p><div className="detail-tags"><StatusTag kind="stage" value={candidate.stage} /><StatusTag value={candidate.status} /><Tag>{candidate.recommendation ? "简历导入" : "Mock 候选人"}</Tag></div><Tabs key={`${candidate.applicationId}-${initialTab}`} defaultActiveKey={initialTab} items={[{ key: "business", label: "业务复筛与面评", children: <CollaborationDetail applicationId={candidate.applicationId} /> }, ...(candidate.recommendation ? [{ key: "screening", label: "初筛与推荐", children: <ScreeningDetails applicationId={candidate.applicationId} /> }] : []), {
         key: "profile",
         label: "基本资料",
         children: <><Descriptions column={2} items={[{

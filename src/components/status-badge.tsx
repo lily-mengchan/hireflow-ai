@@ -2,6 +2,7 @@ import { Tag } from "antd";
 
 export type StatusTone = "progress" | "pending" | "success" | "failure" | "neutral" | "confirmation" | "stage";
 const tones: Record<string, StatusTone> = {
+  "建议进入面试": "confirmation", "不建议进入": "failure", "HR 已确认推进": "progress", "待 HR 确认推进": "confirmation",
   "招聘中": "progress", "进行中": "progress", "已安排": "progress",
   "待处理": "pending", "待安排": "pending", "待业务复筛": "pending", "待反馈": "pending",
   "已通过": "success", "通过": "success", "已完成": "success", "完成": "success",

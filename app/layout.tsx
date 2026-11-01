@@ -7,7 +7,12 @@ export const metadata: Metadata = {
     default: "HireFlow AI · 招聘数据看板",
     template: "%s · HireFlow AI"
   },
-  description: "HireFlow AI 招聘管理后台 · 本地 Mock 演示"
+  description: "HireFlow AI 招聘管理后台 · 本地 Mock 演示",
+  icons: {
+    icon: { url: "/logo.png", type: "image/png" },
+    shortcut: "/logo.png",
+    apple: "/logo.png"
+  }
 };
 export default function RootLayout({
   children

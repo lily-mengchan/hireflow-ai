@@ -20,7 +20,9 @@
     "test:analytics": "node --test tests/analytics.test.cjs",
     "analytics:verify": "node scripts/analytics-verify.cjs",
     "analytics:browser": "node scripts/analytics-browser.cjs",
-    "test": "node --test tests/analytics.test.cjs tests/screening.test.cjs tests/feedback.test.cjs tests/messages.test.cjs tests/recruitment.test.cjs tests/rag.test.cjs tests/conditions.test.cjs",
+    "test": "node --test tests/collaboration.test.cjs tests/analytics.test.cjs tests/screening.test.cjs tests/feedback.test.cjs tests/messages.test.cjs tests/recruitment.test.cjs tests/rag.test.cjs tests/conditions.test.cjs",
+    "test:collaboration": "node --test tests/collaboration.test.cjs",
+    "collaboration:browser": "node scripts/collaboration-browser.cjs",
     "test:conditions": "node --test tests/conditions.test.cjs"
   },
   "dependencies": {

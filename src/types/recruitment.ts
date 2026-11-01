@@ -43,6 +43,7 @@ export interface Application {
   score: number;
   createdAt: string;
   updatedAt: string;
+  collaboration?: import("../data/collaboration").Collaboration;
   preScreening?: import("zod").infer<typeof import("../screening/conditions").savedPreScreeningSchema>;
   recommendation?: import("../screening/schema").Recommendation;
 }
@@ -54,6 +55,7 @@ export interface InterviewRecord {
   scheduledAt: string | null;
   status: Exclude<InterviewStatus, "待安排">;
   note: string;
+  interviewerId?: string;
   interviewer?: string | null;
   result?: "通过" | "未通过" | "待定" | null;
   recordedAt?: string;

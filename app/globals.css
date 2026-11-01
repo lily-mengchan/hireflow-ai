@@ -2709,6 +2709,12 @@ h1 { color:var(--ink); font-size:24px; font-weight:600; }
 .brand small { letter-spacing:.3px; font-size:12px; white-space:normal; max-width:130px; line-height:1.4; }
 .brand { font-size:22px; }
 .brand-mark { flex-shrink:0; }
+.sidebar .brand { gap:11px; padding:0 4px; letter-spacing:0; }
+.brand .brand-mark { width:36px; height:36px; border-radius:10px; }
+.brand-copy { display:flex; flex-direction:column; min-width:0; gap:5px; }
+.brand-name { font-size:20px; font-weight:650; line-height:1.15; letter-spacing:-.5px; }
+.brand-name b { font-size:18px; font-weight:500; }
+.brand .brand-copy small { margin:0; max-width:none; font-size:12px; line-height:1.4; letter-spacing:.5px; white-space:nowrap; color:var(--secondary); }
 .workspace { font-size:13px; }
 .workspace small,.nav-caption,.user small,.breadcrumb,.workspace-indicator { font-size:12px; color:var(--secondary); }
 .nav-item,.user strong,.help-link { font-size:14px; }
@@ -2795,3 +2801,23 @@ h1 { color:var(--ink); font-size:24px; font-weight:600; }
 @media(min-width:1600px) { .stat-number { font-size:32px; } .kanban { grid-template-columns:repeat(6,minmax(264px,1fr)); } }
 @media(max-width:1250px) { .stat-foot { font-size:12px; } }
 @media(max-width:720px) { h1 { font-size:24px; } .page-heading p,.panel-heading p { font-size:13px; } .stat-foot { font-size:12px; } .stat-number { font-size:30px; } .kanban { grid-template-columns:repeat(6,264px); } }
+.collab-form { display: grid; gap: 16px; }
+.collab-form label { display: grid; gap: 8px; font-size: 14px; color: #334155; }
+.collab-card { margin-top: 20px; }
+.collab-stats { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 16px; margin-top: 20px; }
+.collab-stats strong { display: block; font-size: 28px; color: #2563eb; }
+.collab-copy { white-space: pre-wrap; line-height: 1.8; }
+.collab-section .ant-card-head { min-height:44px; font-size:15px; }
+.collab-section .ant-card-body > p { margin:0; line-height:1.8; }
+.collab-finding + .collab-finding { border-top:1px solid var(--line); padding-top:12px; margin-top:12px; }
+.collab-finding p { margin:0 0 6px; line-height:1.8; }
+.collab-form .ant-tag { font-size: 14px; padding: 3px 10px; }
+.topbar select { max-width: 230px; background: white; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px; }
+.collab-card { overflow-wrap: anywhere; min-width: 0; }
+@media (max-width: 720px) {
+  .topbar .breadcrumb > span, .topbar .breadcrumb > strong { display: none; }
+  .topbar-actions { min-width: 0; gap: 8px; }
+  .topbar-actions > .icon-button, .topbar-divider, .topbar-actions > .avatar { display: none; }
+  .topbar-actions label { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .topbar select { max-width: 220px; min-width: 0; }
+}

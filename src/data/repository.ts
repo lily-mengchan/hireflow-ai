@@ -1,8 +1,10 @@
+import { collaborationSchema, feedbackFields, hrIdentity, identities, requireHR, requireAssigned, type Identity, type CollaborationCommand } from "./collaboration";
 import type { Application, InterviewRecord, Job, RecruitmentData, RecruitmentEvent } from "../types/recruitment";
 import { eventSchema, messageSchema, type Confirmation } from "../messages/schema";
 import { matchApplications, messageFingerprint, proposeChange } from "../messages/workflow";
 import { workflows } from "../mocks/data";
 import { createSeed } from "../mocks/seed";
+import { mockRecommendation } from "../mocks/recommendations";
 import { recommendationSchema, resumeSchema, saveImportSchema, type SaveImport } from "../screening/schema";
 import { jobVersion, redactContacts } from "../screening/rules";
 import { conditionsSchema, evaluateConditions, savedPreScreeningSchema, validatePreScreening } from "../screening/conditions";
@@ -51,6 +53,13 @@ export function validateData(value: unknown): asserts value is RecruitmentData {
     const job = data.jobs.find(j => j.id === a.jobId); assert(job && data.candidates.some(c => c.id === a.candidateId));
     assert(workflows.find(w => w.id === job.workflowId)!.stages.includes(a.stage));
     const pair = JSON.stringify([a.candidateId, a.jobId]); assert(!pairs.has(pair)); pairs.add(pair);
+    if (a.collaboration !== undefined) {
+      assert(collaborationSchema.safeParse(a.collaboration).success);
+      const c = a.collaboration;
+      assert(new Set(c.reviews.map(r => r.id)).size === c.reviews.length);
+      assert(new Set(c.feedback.map(f => f.id)).size === c.feedback.length);
+      c.feedback.forEach(f => { assert(data.interviews.some(i => i.id === f.interviewId && i.applicationId === a.id)); assert(identities.some(i => i.role === "interviewer" && i.id === f.reviewerId)); if (f.revisionOf) assert(c.feedback.some(old => old.id === f.revisionOf && old.interviewId === f.interviewId && old.reviewerId === f.reviewerId)); });
+    }
     if (a.recommendation !== undefined) assert(recommendationSchema.safeParse(a.recommendation).success);
     if (a.preScreening !== undefined) { assert(savedPreScreeningSchema.safeParse(a.preScreening).success); assert(a.preScreening.applicationId === a.id && a.preScreening.jobId === a.jobId); }
   });
@@ -82,15 +91,16 @@ export function validateData(value: unknown): asserts value is RecruitmentData {
 
 /** Storage writes precede publication: a quota/permission error never pretends to save. */
 export class RecruitmentRepository {
-  constructor(private storage: StorageAdapter, private clock = () => new Date(), private id = () => crypto.randomUUID()) {}
+  constructor(private storage: StorageAdapter, private clock = () => new Date(), private id = () => crypto.randomUUID(), private actor: () => Identity = () => hrIdentity) {}
   load(): RecruitmentData {
     const raw = this.storage.getItem(STORAGE_KEY);
-    if (raw === null) return this.reset();
+    if (raw === null) return this.persist(createSeed(this.clock()));
     const data: unknown = JSON.parse(raw); validateData(data); return data;
   }
   private persist(data: RecruitmentData) { validateData(data); this.storage.setItem(STORAGE_KEY, JSON.stringify(data)); return data; }
-  reset() { return this.persist(createSeed(this.clock())); }
+  reset() { requireHR(this.actor()); return this.persist(createSeed(this.clock())); }
   saveImport(raw: SaveImport) {
+    requireHR(this.actor());
     const input = saveImportSchema.parse(raw), data = this.load();
     // A retry of the same confirmation returns the existing atomic commit.
     if (data.events.some(e => e.id === `IMPORT-${input.importId}`)) return data;
@@ -126,6 +136,7 @@ export class RecruitmentRepository {
     return this.persist(data);
   }
   async confirmMessage(input: Confirmation) {
+    requireHR(this.actor());
     const message = messageSchema.parse(input.message);
     const original = eventSchema.parse(input.original);
     const event = eventSchema.parse(input.event);
@@ -142,6 +153,7 @@ export class RecruitmentRepository {
     assert(input.expected && ["stage", "status", "interview", "updatedAt"].every(key => application[key as keyof Application] === input.expected[key as keyof Confirmation["expected"]]), "申请状态已变化，请重新核对后确认");
     const now = this.clock();
     const proposal = proposeChange(data, application, event, now);
+    assert(!application.collaboration || application.collaboration.businessReviewStatus === "HR 已确认推进" || (proposal.target.stage === application.stage && proposal.target.status !== "已通过"), "请先处理业务复筛并确认推进");
     assert(!proposal.errors.length, proposal.errors.join("；"));
     const before = { stage: application.stage, status: application.status, interview: application.interview };
     const interviewChanges: NonNullable<RecruitmentEvent["interviewChanges"]> = [];
@@ -149,6 +161,7 @@ export class RecruitmentRepository {
       const existing = data.interviews.find(i => i.applicationId === application!.id && i.stage === stage && i.status === "已安排")
         ?? (status === "已完成" ? data.interviews.find(i => i.applicationId === application!.id && i.stage === stage && i.status === "已完成") : undefined);
       const record: InterviewRecord = {
+        ...(existing?.interviewerId ? { interviewerId: existing.interviewerId } : {}),
         id: existing?.id ?? `INT-${eventId}-${stage}`, applicationId: application!.id, stage, status,
         scheduledAt: status === "已安排" ? event.interviewTime : existing?.scheduledAt ?? (!event.nextStage ? event.interviewTime : null),
         interviewer: status === "已安排" || !event.nextStage ? event.interviewer ?? existing?.interviewer ?? null : existing?.interviewer ?? null,
@@ -169,6 +182,7 @@ export class RecruitmentRepository {
     return this.persist(data);
   }
   saveJob(input: JobInput, jobId?: string) {
+    requireHR(this.actor());
     evaluateConditions(jobId ?? "new", input.screeningConditions, {});
     const data = this.load(); const now = this.clock().toISOString();
     const existing = jobId ? data.jobs.find(j => j.id === jobId) : undefined;
@@ -180,12 +194,14 @@ export class RecruitmentRepository {
     return this.persist(data);
   }
   updateApplication(applicationId: string, change: ApplicationChange) {
+    requireHR(this.actor());
     const data = this.load(); const application = data.applications.find(a => a.id === applicationId);
     assert(application, "申请已不存在，请重新选择"); assert(change.note.trim(), "请填写本次变更说明"); progress(change);
     const now = this.clock().toISOString();
     const before = { stage: application.stage, status: application.status, interview: application.interview };
     const after = { stage: change.stage, status: change.status, interview: change.interview };
     assert(JSON.stringify(before) !== JSON.stringify(after), "状态没有变化，无需重复保存");
+    assert(!application.collaboration || application.collaboration.businessReviewStatus === "HR 已确认推进" || (after.stage === before.stage && after.status !== "已通过"), "请先处理业务复筛并确认推进");
     Object.assign(application, after, { updatedAt: now });
     const event: RecruitmentEvent = { id: `EV-${this.id()}`, applicationId, candidateId: application.candidateId, jobId: application.jobId, type: "application-updated", occurredAt: now, title: `${before.stage}（${before.status}）→ ${after.stage}（${after.status}） · 面试${before.interview} → ${after.interview}`, note: change.note.trim(), before, after };
     data.events.push(event);
@@ -196,4 +212,63 @@ export class RecruitmentRepository {
     }
     return this.persist(data);
   }
+  collaborate(applicationId: string, commandId: string, command: CollaborationCommand) {
+    const actor = this.actor(), data = this.load();
+    const a = data.applications.find(a => a.id === applicationId);
+    assert(a, "操作无效，请核对任务状态、权限及输入后重试");
+    const c = a.collaboration;
+    if (command.type === "assign" || command.type === "advance" || command.type === "schedule") requireHR(actor);
+    else if (command.type === "review") { assert(c, "操作无效，请核对任务状态、权限及输入后重试"); requireAssigned(actor, c.interviewerId); }
+    else { const task = data.interviews.find(i => i.id === command.interviewId && i.applicationId === a.id); assert(task?.interviewerId, "操作无效，请核对任务状态、权限及输入后重试"); requireAssigned(actor, task.interviewerId); }
+    assert(commandId.trim() && commandId.length <= 150, "操作无效，请核对任务状态、权限及输入后重试");
+    const eventId = `COLLAB-${commandId}`;
+    const previous = data.events.find(e => e.id === eventId);
+    if (previous) { assert(previous.applicationId === a.id, "操作无效，请核对任务状态、权限及输入后重试"); return data; }
+    const now = this.clock().toISOString();
+    assert(a.status !== "已淘汰" && a.status !== "已通过", "操作无效，请核对任务状态、权限及输入后重试");
+    const before = { stage: a.stage, status: a.status, interview: a.interview };
+    if (command.type === "assign") {
+      assert(identities.some(i => i.id === command.interviewerId && i.role === "interviewer"), "操作无效，请核对任务状态、权限及输入后重试");
+      const recommendation = a.recommendation ?? mockRecommendation(data, a);
+      assert(recommendation?.content, "请先完成 HR 推荐评语");
+      assert(!c || (c.businessReviewStatus !== "HR 已确认推进" && c.feedback.length === 0), "操作无效，请核对任务状态、权限及输入后重试");
+      const job = data.jobs.find(j => j.id === a.jobId)!;
+      const stages = workflows.find(w => w.id === job.workflowId)!.stages;
+      assert(stages.slice(0, 2).includes(a.stage), "只有初筛或业务复筛阶段可以分配复筛");
+      a.stage = stages[1];
+      a.recommendation = recommendation;
+      a.recommendation.status = "待业务复筛";
+      a.recommendation.recommendedAt = now;
+      a.collaboration = { interviewerId: command.interviewerId as "interviewer-1" | "interviewer-2", sharedConclusion: command.sharedConclusion.trim(), assignedAt: now, assignmentId: commandId, businessReviewStatus: "待业务复筛", reviews: c?.reviews ?? [], feedback: c?.feedback ?? [], drafts: c?.drafts ?? {} };
+    } else if (command.type === "review") {
+      assert(c && c.assignmentId === command.assignmentId && c.businessReviewStatus === "待业务复筛", "操作无效，请核对任务状态、权限及输入后重试");
+      assert(["建议进入面试", "不建议进入"].includes(command.result), "操作无效，请核对任务状态、权限及输入后重试");
+      c.reviews.push({ id: commandId, reviewerId: actor.id, submittedAt: now, result: command.result, comment: command.comment.trim() }); c.businessReviewStatus = command.result;
+    } else if (command.type === "advance") {
+      assert(c?.businessReviewStatus === "建议进入面试", "操作无效，请核对任务状态、权限及输入后重试");
+      const job = data.jobs.find(j => j.id === a.jobId)!;
+      const stages = workflows.find(w => w.id === job.workflowId)!.stages;
+      const index = stages.indexOf(a.stage);
+      assert(index >= 0 && index < stages.length - 1, "操作无效，请核对任务状态、权限及输入后重试");
+      a.stage = stages[index + 1]; a.interview = "待安排"; c.businessReviewStatus = "HR 已确认推进";
+    } else if (command.type === "schedule") {
+      assert(c?.businessReviewStatus === "HR 已确认推进", "操作无效，请核对任务状态、权限及输入后重试");
+      assert(identities.some(i => i.id === command.interviewerId && i.role === "interviewer"), "操作无效，请核对任务状态、权限及输入后重试"); date(command.scheduledAt);
+      assert(!data.interviews.some(i => i.applicationId === a.id && i.stage === a.stage && i.status === "已安排"), "操作无效，请核对任务状态、权限及输入后重试");
+      data.interviews.push({ id: `INT-${commandId}`, applicationId: a.id, stage: a.stage, scheduledAt: command.scheduledAt, status: "已安排", interviewerId: command.interviewerId, note: "HR 分配面试任务" }); a.interview = "已安排";
+    } else {
+      assert(c, "操作无效，请核对任务状态、权限及输入后重试"); const fields = feedbackFields.parse(command.fields);
+      const key = `${command.interviewId}:${actor.id}`;
+      const history = c.feedback.filter(f => f.interviewId === command.interviewId && f.reviewerId === actor.id);
+      const latest = history.at(-1);
+      assert(latest?.id === command.revisionOf, "操作无效，请核对任务状态、权限及输入后重试");
+      if (command.type === "draft") c.drafts[key] = fields;
+      else { assert(fields.summary.trim() && fields.ability.trim() && fields.projects.trim() && fields.communication.trim() && fields.strengths.trim(), "操作无效，请核对任务状态、权限及输入后重试"); c.feedback.push({ id: commandId, interviewId: command.interviewId, reviewerId: actor.id, submittedAt: now, ...(latest ? { revisionOf: latest.id } : {}), fields }); delete c.drafts[key]; }
+    }
+    a.updatedAt = now;
+    const titles = { assign: "HR 分配业务复筛", review: "业务复筛意见已提交", advance: "HR 确认推进", schedule: "HR 安排面试", draft: "面评草稿已保存", submit: "面评已提交" };
+    data.events.push({ id: eventId, applicationId: a.id, candidateId: a.candidateId, jobId: a.jobId, type: "application-updated", occurredAt: now, title: titles[command.type], note: `演示操作者：${actor.id}`, before, after: { stage: a.stage, status: a.status, interview: a.interview } });
+    return this.persist(data);
+  }
+
 }
